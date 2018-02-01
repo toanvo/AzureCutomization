@@ -8,9 +8,6 @@
 
 {
     "Parameters": {
-        // Parameters are values that may be passed when Install-SitecoreConfiguration is called.
-        // Parameters must declare a Type and may declare a DefaultValue and Description.
-        // Parameters with no DefaultValue are required when Install-SitecoreConfiguration is called.
         "Package": {
             "Type": "string",
             "Description": "The path to the Web Deploy package to deploy."
@@ -63,7 +60,7 @@
         },
         "SqlCollectionPassword": {
             "Type": "string",
-            "DefaultValue": "Test12345",
+            "DefaultValue": "Test@12345",
             "Description": "The Sql admin password to use when installing databases."
         },
         "SqlProcessingPoolsUser": {
@@ -73,7 +70,7 @@
         },
         "SqlProcessingPoolsPassword": {
             "Type": "string",
-            "DefaultValue": "Test12345",
+            "DefaultValue": "Test@12345",
             "Description": "The Sql password for the Processing Pools connection string in Sitecore."
         },
         "SqlReferenceDataUser": {
@@ -83,7 +80,7 @@
         },
         "SqlReferenceDataPassword": {
             "Type": "string",
-            "DefaultValue": "Test12345",
+            "DefaultValue": "Test@12345",
             "Description": "The Sql password for the Reference Data connection string in Sitecore."
         },
         "SqlMarketingAutomationUser": {
@@ -93,8 +90,18 @@
         },
         "SqlMarketingAutomationPassword": {
             "Type": "string",
-            "DefaultValue": "Test12345",
+            "DefaultValue": "Test@12345",
             "Description": "The Sql password for the Marketing Automation connection string in Sitecore."
+        },
+		"SqlMessagingUser": {
+            "Type": "string",
+            "DefaultValue": "messaginguser",
+            "Description": "The Sql user for the Messaging connection string in Sitecore."
+        },
+        "SqlMessagingPassword": {
+            "Type": "string",
+            "DefaultValue": "Test@12345",
+            "Description": "The Sql password for the Messaging connection string in Sitecore."
         },
         "SqlServer": {
             "Type": "string",
@@ -118,9 +125,6 @@
         }
     },
     "Variables": {
-        // Variables are values calculated in a configuration.
-        // They can reference Parameters, other Variables, and config functions.
-        // The prefix for shards created by the tool
         "Sharding.Database.Prefix": "[concat(parameter('SqlDbPrefix'), '_Xdb.Collection.Shard')]",
 
         // The database names.
@@ -130,33 +134,19 @@
         "Sql.Database.Pools":               "[concat(parameter('SqlDbPrefix'), '_Processing.Pools')]",
         "Sql.Database.MarketingAutomation": "[concat(parameter('SqlDbPrefix'), '_MarketingAutomation')]",
         "Sql.Database.Reference":           "[concat(parameter('SqlDbPrefix'), '_ReferenceData')]",
-
-        // The security certificate details
+		"Sql.Database.Messaging":           "[concat(parameter('SqlDbPrefix'), '_Messaging')]",
         "Security.CertificateStore":                "Cert:\\Localmachine\\My",
         "Security.SSL.CertificateThumbprint":       "[GetCertificateThumbprint(parameter('SSLCert'), variable('Security.CertificateStore'))]",
         "Security.XConnect.CertificateThumbprint":  "[GetCertificateThumbprint(parameter('XConnectCert'), variable('Security.CertificateStore'))]",
         "Security.XConnect.CertificatePath":        "[joinpath(variable('Security.CertificateStore'), variable('Security.XConnect.CertificateThumbprint'))]",
-
-        // The sites full path on disk
         "Site.PhysicalPath": "[joinpath(parameter('InstallDirectory'), parameter('SiteName'))]",
-
         "Site.DataFolder":  "[joinpath(variable('Site.PhysicalPath'), 'App_Data')]",
-
-        // The path to the index worker windows service
         "Services.IndexWorker.InstallPath": "[joinpath(variable('Site.DataFolder'), 'jobs','continuous','IndexWorker')]",
         "Services.IndexWorker.Name":        "[concat(parameter('SiteName'), '-IndexWorker')]",
-
-        // The path to the automation engine windows service
         "Services.MarketingAutomationEngine.InstallPath":   "[joinpath(variable('Site.DataFolder'), 'jobs','continuous','AutomationEngine')]",
         "Services.MarketingAutomationEngine.Name":          "[concat(parameter('SiteName'), '-MarketingAutomationService')]",
-
-        // The marketing automation endpoint.
         "Endpoint.MarketingAutomation": "[concat('https://', parameter('SiteName'))]",
-
-        // The reference data endpoint.
         "Endpoint.ReferenceData": "[concat(variable('Endpoint.MarketingAutomation'), '/refdata')]",
-
-        // The sharding tool details.
         "Sharding.Root.Path":   "[joinpath(variable('Site.DataFolder'), 'collectiondeployment')]",
         "Sharding.Tool.Path":   "[joinpath(variable('Sharding.Root.Path'), 'Sitecore.Xdb.Collection.Database.SqlShardingDeploymentTool.exe')]",
         "Sharding.DacPac.Path": "[joinpath(variable('Sharding.Root.Path'), 'Sitecore.Xdb.Collection.Database.Sql.dacpac')]",
@@ -167,22 +157,13 @@
         ],
         "Sharding.DB.Connection": "[sqlconnectionstring(parameter('SqlServer'), '', parameter('SqlAdminUser'), parameter('SqlAdminPassword'))]",
         "Sharding.Edition": "Basic",
-
-        // The solr configuration details.
         "Xdb.Name":         "[concat(parameter('SolrCorePrefix'), '_xdb')]",
         "Xdb.Rebuild.Name": "[concat(variable('Xdb.Name'), '_rebuild')]",
         "Solr.Url.Xdb":     "[concat(parameter('SolrUrl'), '/', variable('Xdb.Name'))]",
-
-        // The content at this path is installed by the wdp
         "Solr.Config.Path": "[joinpath(variable('Site.DataFolder'), 'solrcommands', 'schema.json')]"
     },
     "Tasks": {
-        // Tasks are separate units of work in a configuration.
-        // Each task is an action that will be completed when Install-SitecoreConfiguration is called.
-        // By default, tasks are applied in the order they are declared.
-        // Tasks may reference Parameters, Variables, and config functions.
         "CreatePaths": {
-            // Ensure the destination path for the site exists.
             "Type": "EnsurePath",
             "Params": {
                 "Exists": [
@@ -347,6 +328,7 @@
                         { "Name": "Collection Shard 1 Database Name", "Value": "[variable('Sql.Database.Shard1')]" },
                         { "Name": "Processing Pools Database Name", "Value": "[variable('Sql.Database.Pools')]" },
                         { "Name": "Marketing Automation Database Name", "Value": "[variable('Sql.Database.MarketingAutomation')]" },
+						{ "Name": "Messaging Database Name", "Value": "[variable('Sql.Database.Messaging')]" },
                         { "Name": "Reference Data Database Name", "Value": "[variable('Sql.Database.Reference')]" },
                         { "Name": "Search SOLR Core Application Connection String", "Value": "[variable('Solr.Url.Xdb')]" },
                         { "Name": "XConnect Server Configuration Environment", "Value": "[parameter('XConnectEnvironment')]" },
@@ -363,7 +345,10 @@
                         { "Name": "Reference Data Database Application User Name", "Value": "[parameter('SqlReferenceDataUser')]" },
                         { "Name": "Reference Data Database Application User Password", "Value": "[parameter('SqlReferenceDataPassword')]" },
                         { "Name": "Marketing Automation Database Application User Name", "Value": "[parameter('SqlMarketingAutomationUser')]" },
-                        { "Name": "Marketing Automation Database Application User Password", "Value": "[parameter('SqlMarketingAutomationPassword')]" }
+                        { "Name": "Marketing Automation Database Application User Password", "Value": "[parameter('SqlMarketingAutomationPassword')]" },
+						{ "Name": "Messaging Database Name", "Value": "[variable('Sql.Database.Messaging')]" },
+						{ "Name": "Messaging Database Application User Name", "Value": "[parameter('SqlMessagingUser')]" },
+                        { "Name": "Messaging Database Application User Password", "Value": "[parameter('SqlMessagingPassword')]" }
                     ]
                 }
             }
